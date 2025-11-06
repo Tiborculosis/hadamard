@@ -5,6 +5,7 @@ import multiprocessing as mp
 from sage.all import Integer
 from functools import lru_cache
 import time
+import os
 
 @lru_cache(maxsize=None)  # unlimited cache
 def cached_permutations(tail_tuple):
@@ -153,8 +154,30 @@ def build_permutation_core_CHMs(core_coeffs, n, d):
 	backtrack([first_row, second_row])
 	return results
 
-def write_chms_to_file(chms, filename="output.txt"):
-	with open(f"output/{filename}", "w") as f:
+# def write_chms_to_file(chms, folder = "temp_name/", filename="output.txt"):
+# 	if chms:
+# 		path = folder + "nonempty/" + filename
+# 		with open(f"output/{path}", "w") as f:
+# 			for i, mat in enumerate(chms, 1):
+# 				f.write(f"Matrix {i}:\n")
+# 				for row in mat:
+# 					f.write(" ".join(map(str, row)) + "\n")
+# 				f.write("\n")
+# 	else:
+# 		path = folder + "empty/" + filename
+# 		with open(f"output/{path}", "w") as f:
+# 			f.write("No matrices found.")
+
+def write_chms_to_file(chms, folder="temp_name/", filename="output.txt"):
+	if chms:
+		path = folder + "nonempty/" + filename
+	else:
+		path = folder + "empty/" + filename
+
+	full_path = os.path.join("output", path)
+	os.makedirs(os.path.dirname(full_path), exist_ok=True)
+
+	with open(full_path, "w") as f:
 		if chms:
 			for i, mat in enumerate(chms, 1):
 				f.write(f"Matrix {i}:\n")
@@ -162,7 +185,7 @@ def write_chms_to_file(chms, filename="output.txt"):
 					f.write(" ".join(map(str, row)) + "\n")
 				f.write("\n")
 		else:
-			f.write(f"No matrices found.")
+			f.write("No matrices found.")
 
 # --- Helper for chunking ---
 def chunk_list(lst, chunk_size):
@@ -236,7 +259,7 @@ def run_parallel(n, d):
     t3 = time.time()
     print(f"Permutation-core CHMs ({n}, {d}): {t3 - t2:.3f} seconds")
     # Write results
-    write_chms_to_file(permutation_chms, f"permutation/permutation-{int(n)}-{int(d)}.txt")
+    write_chms_to_file(permutation_chms, f"permutation/", f"permutation-{int(n)}-{int(d)}.txt")
 
     # --- Parallel Butson CHMs ---
     safe_vector_list = [tuple(row) for row in vector_list]  # tuples are pickle-safe
@@ -251,7 +274,7 @@ def run_parallel(n, d):
     t5 = time.time()
     print(f"Butson-type CHMs ({n}, {d}): {t5 - t4:.3f} seconds")
     # write to file
-    write_chms_to_file(butson_chms, f"butson/butson-{int(n)}-{int(d)}.txt")
+    write_chms_to_file(butson_chms, f"butson/", f"butson-{int(n)}-{int(d)}.txt")
 
     print(f"Total runtime ({n}, {d}): {t5 - t0: .3f} seconds")
 
@@ -311,6 +334,13 @@ def build_Butson_CHMs(candidate_rows, n, d, start_row):
 def process_butson(start_rows_chunk, full_vector_list, n, d):
     """
     Each process takes a chunk of starting rows, builds all CHMs starting from them.
+
+	THIS COULD BE SIMPLIFIED FURTHER BY INSTEAD OF PASSING IN THE FULL VECTOR LIST,
+	ONLY PASSING IN THE PORTION OF THE LIST >= THE START ROWS IN THE CHUNK.
+	WE COULD ALSO PORTION OUT THE LIST SO THAT THE ONES STARTING WITH EARLIER ROWS HAVE FEWER TO WORK WITH,
+	THEREBY REDUCING THE IMBALANCE OF THE COMPUTATIONS THAT ARISE FROM COMPARING THE FIRST NTH OF THE LIST TO THE WHOLE LIST,
+	BUT COMPARING THE LAST NTH OF THE LIST TO ONLY THE LAST NTH OF THE LIST.
+	MAYBE JUST PORTION IT SO THAT THE PRODUCT REMAINS APPROXIMATELY CONSTANT?
     """
     results = []
     for start_row in start_rows_chunk:
@@ -324,6 +354,10 @@ def build_circulant_core_CHMs(core_coeffs, n, d):
 	n: size of the CHM
 	d: dth root of unity, i.e. e^{2pi i/d}
 	Returns: list of matrices (each matrix is a list of rows, each row is a list)
+
+	EVENTUALLY THIS IS SUPPOSED TO JUST PERMUTE THE LIST, AND THEN APPLY THAT PERMUTATION A SECOND TIME,
+	AND THEN REPEATEDLY APPLY THAT PERMUTATION AGAIN WITH EACH SUBSEQUENT ROW.
+	NOT SURE HOW TO DO THAT, BUT IT'S PROBABLY USEFUL FOR SOMETHING OR OTHER.
 	"""
 	first_row = [0]*n
 	fixed_first = core_coeffs[0]
@@ -373,7 +407,7 @@ def circulant_core_parallel(n, d):
 	t3 = time.time()
 	print(f"Circulant-core CHMs ({n}, {d}): {t3 - t2:.3f} seconds")
 	# Write results
-	write_chms_to_file(circulant_core_chms, f"circulant-core/circulant-core-{int(n)}-{int(d)}.txt")
+	write_chms_to_file(circulant_core_chms, f"circulant-core/", f"circulant-core-{int(n)}-{int(d)}.txt")
 	print(f"Total runtime ({n}, {d}): {t3 - t0: .3f} seconds")
 
 
@@ -383,10 +417,12 @@ def init_worker(d_value):
     zeta = CyclotomicField(d_value).gen()
 
 if __name__ == "__main__":
-    start_time = time.time()
-    for d in range(2, 25):
-        R = CyclotomicField(d)
-        zeta = R.gen()
-        rows_orthogonal_cached.cache_clear() # Avoid conflicts that may arise due to using the same tuples with different zeta values
-        for n in range(2, 25):
-            circulant_core_parallel(n, d)
+	start_time = time.time()
+	d_values = [6]
+	n_values = [5, 6]
+	for d in d_values:
+		R = CyclotomicField(d)
+		zeta = R.gen()
+		rows_orthogonal_cached.cache_clear() # Avoid conflicts that may arise due to using the same tuples with different zeta values
+		for n in n_values:
+			run_parallel(n, d)
