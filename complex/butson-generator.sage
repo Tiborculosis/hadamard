@@ -120,6 +120,27 @@ def valid_permutation(candidate_row, existing_rows):
 					return False
 	return True
 
+def build_circulant_core_CHMs(core_coeffs, n, d):
+	"""
+	core_coeffs: list of integers
+	n: size of the CHM
+	d: dth root of unity, i.e. e^{2pi i/d}
+	Returns: list of matrices (each matrix is a list of rows, each row is a list)
+
+	EVENTUALLY THIS IS SUPPOSED TO JUST PERMUTE THE LIST, AND THEN APPLY THAT PERMUTATION A SECOND TIME,
+	AND THEN REPEATEDLY APPLY THAT PERMUTATION AGAIN WITH EACH SUBSEQUENT ROW.
+	NOT SURE HOW TO DO THAT, BUT IT'S PROBABLY USEFUL FOR SOMETHING OR OTHER.
+	"""
+	first_row = [0]*n
+	fixed_first = core_coeffs[0]
+	tail = core_coeffs[1:]
+	matrix = [first_row, core_coeffs]
+	for i in range(1, n-1):
+		if not rows_orthogonal_cached(tuple([fixed_first] + tail[-i:] + tail[:-i]), tuple([fixed_first] + tail)):
+			return []
+		matrix.append([fixed_first] + tail[-i:] + tail[:-i])
+	return [matrix]
+
 def build_permutation_core_CHMs(core_coeffs, n, d):
 	"""
 	core_coeffs: list of integers
@@ -153,20 +174,6 @@ def build_permutation_core_CHMs(core_coeffs, n, d):
 
 	backtrack([first_row, second_row])
 	return results
-
-# def write_chms_to_file(chms, folder = "temp_name/", filename="output.txt"):
-# 	if chms:
-# 		path = folder + "nonempty/" + filename
-# 		with open(f"output/{path}", "w") as f:
-# 			for i, mat in enumerate(chms, 1):
-# 				f.write(f"Matrix {i}:\n")
-# 				for row in mat:
-# 					f.write(" ".join(map(str, row)) + "\n")
-# 				f.write("\n")
-# 	else:
-# 		path = folder + "empty/" + filename
-# 		with open(f"output/{path}", "w") as f:
-# 			f.write("No matrices found.")
 
 def write_chms_to_file(chms, folder="temp_name/", filename="output.txt"):
 	if chms:
@@ -211,7 +218,7 @@ def process_circulant_core(chunk, n, d):
     """
     results = []
     for row in chunk:
-        results.append(build_circulant_core_CHMs(row, int(n), int(d)))
+        results.extend(build_circulant_core_CHMs(row, int(n), int(d)))
     return results
 
 # --- Top-level function for Butson CHMs ---
@@ -347,28 +354,6 @@ def process_butson(start_rows_chunk, full_vector_list, n, d):
         results.extend(build_Butson_CHMs(full_vector_list, n, d, start_row))
     return results
 
-
-def build_circulant_core_CHMs(core_coeffs, n, d):
-	"""
-	core_coeffs: list of integers
-	n: size of the CHM
-	d: dth root of unity, i.e. e^{2pi i/d}
-	Returns: list of matrices (each matrix is a list of rows, each row is a list)
-
-	EVENTUALLY THIS IS SUPPOSED TO JUST PERMUTE THE LIST, AND THEN APPLY THAT PERMUTATION A SECOND TIME,
-	AND THEN REPEATEDLY APPLY THAT PERMUTATION AGAIN WITH EACH SUBSEQUENT ROW.
-	NOT SURE HOW TO DO THAT, BUT IT'S PROBABLY USEFUL FOR SOMETHING OR OTHER.
-	"""
-	first_row = [0]*n
-	fixed_first = core_coeffs[0]
-	tail = core_coeffs[1:]
-	matrix = [first_row, core_coeffs]
-	for i in range(1, n-1):
-		if not rows_orthogonal_cached(tuple([fixed_first] + tail[-i:] + tail[:-i]), tuple([fixed_first] + tail)):
-			return []
-		matrix.append([fixed_first] + tail[-i:] + tail[:-i])
-	return matrix
-
 # --- Main parallel runner ---
 def circulant_core_parallel(n, d):
 	# Ensure inputs are Sage Integers
@@ -418,11 +403,11 @@ def init_worker(d_value):
 
 if __name__ == "__main__":
 	start_time = time.time()
-	d_values = [6]
-	n_values = [5, 6]
+	d_values = list(range(6, 7))
+	n_values = list(range(6, 14))
 	for d in d_values:
 		R = CyclotomicField(d)
 		zeta = R.gen()
 		rows_orthogonal_cached.cache_clear() # Avoid conflicts that may arise due to using the same tuples with different zeta values
 		for n in n_values:
-			run_parallel(n, d)
+			circulant_core_parallel(n, d)

@@ -4,7 +4,3 @@ Matrix 1:
 0 3 0 3
 0 3 3 0
 
-Matrix 2:
-
-Matrix 3:
-
