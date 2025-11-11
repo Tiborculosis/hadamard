@@ -403,11 +403,12 @@ def init_worker(d_value):
 
 if __name__ == "__main__":
 	start_time = time.time()
-	d_values = list(range(6, 7))
-	n_values = list(range(6, 14))
+	d_values = list(range(10, 11))
+	n_values = list(range(2, 12))
 	for d in d_values:
 		R = CyclotomicField(d)
 		zeta = R.gen()
 		rows_orthogonal_cached.cache_clear() # Avoid conflicts that may arise due to using the same tuples with different zeta values
 		for n in n_values:
+			run_parallel(n, d)
 			circulant_core_parallel(n, d)
