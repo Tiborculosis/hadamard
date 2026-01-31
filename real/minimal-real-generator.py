@@ -78,8 +78,54 @@ def print_hadamard_01(n, rows_bitmask):
         row_list = [1] + [1 if (row >> (m - 1 - j)) & 1 else 0 for j in range(m)]
         print(f"Row {i}:", row_list)
 
+def agreement_count(row, k):
+	m = len(row)
+	k %= m  # reduce offset modulo m
+
+	count = 0
+	for i in range(m):
+		if row[i] == row[(i + k) % m]:
+			count += 1
+	return count
+
+
+def circulant_core_search(n):
+	
+    m = 4*n - 1
+    r = 2*n - 1   # number of movable zeros
+
+	# initial positions of movable zeros
+    pos = list(range(1, r + 1))
+    row = [1] * m
+    row[0] = 0
+    while row[0] == 0:
+		# build row from current state
+        row = [1] * m
+        row[0] = 0
+
+        for p in pos:
+            row[p] = 0
+        yield row
+
+        for k in range(m):
+            if agreement_count(row, k) != r:
+                for i in reversed(range(r)):
+                    if pos[i] != i + 1 + (m - 1 - k):
+                        pos[i] += 1
+                        for j in range(i + 1, k):
+                            pos[j] = pos[j - 1] + 1
+                        break
+                    else:
+                        print(f"No matrices of dimension {4*n} found.")
+                        return
+        print(f"Row {row} produces a circulant core Hadamard matrix of dimension {4*n}.")
+
+		# advance to next configuration
+
+
 if __name__ == "__main__":
     n = 4  # adjust as needed
-    rows_bitmask = find_minimal_hadamard(n)
-    if rows_bitmask:
-        print_hadamard_01(n, rows_bitmask)
+    #rows_bitmask = find_minimal_hadamard(n)
+    #if rows_bitmask:
+        #print_hadamard_01(n, rows_bitmask)
+    circulant_core_search(2)

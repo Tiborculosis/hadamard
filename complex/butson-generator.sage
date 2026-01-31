@@ -212,14 +212,17 @@ def process_chunk(chunk, n, d):
     return results
 
 def process_circulant_core(chunk, n, d):
-    """
-    Compute permutation-core CHMs for a chunk of rows.
-    Returns a list of matrices.
-    """
-    results = []
-    for row in chunk:
-        results.extend(build_circulant_core_CHMs(row, int(n), int(d)))
-    return results
+	"""
+	Compute permutation-core CHMs for a chunk of rows.
+	Returns a list of matrices.
+	"""
+	results = []
+	for row in chunk:
+		tail = row[2:]
+		for perm in list(Permutations(tuple(tail))):
+			new_row = row[0:2] + list(perm)
+			results.extend(build_circulant_core_CHMs(new_row, int(n), int(d)))
+	return results
 
 # --- Top-level function for Butson CHMs ---
 def process_butson(_unused, vector_list, n, d):
@@ -403,12 +406,12 @@ def init_worker(d_value):
 
 if __name__ == "__main__":
 	start_time = time.time()
-	d_values = list(range(10, 11))
-	n_values = list(range(2, 12))
+	d_values = list(range(6, 7))
+	n_values = list(range(13, 14))
 	for d in d_values:
 		R = CyclotomicField(d)
 		zeta = R.gen()
 		rows_orthogonal_cached.cache_clear() # Avoid conflicts that may arise due to using the same tuples with different zeta values
 		for n in n_values:
-			run_parallel(n, d)
+			#run_parallel(n, d)
 			circulant_core_parallel(n, d)
