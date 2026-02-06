@@ -416,6 +416,6 @@ if __name__ == "__main__":
 		zeta = R.gen()
 		rows_orthogonal_cached.cache_clear() # Avoid conflicts that may arise due to using the same tuples with different zeta values
 		for n in n_values:
-			#run_parallel(n, d)
-			circulant_core_parallel(n, d)
+			run_parallel(n, d)
+			#circulant_core_parallel(n, d)
 
